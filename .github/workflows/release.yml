@@ -1,6 +1,12 @@
 name: goreleaser
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '版本'
+        required: true
+        default: 'latest'
   push:
     tags:
       - '*'
@@ -22,8 +28,8 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.20.14
-      -
-        name: Install UPX
+
+      - name: Install UPX
         uses: crazy-max/ghaction-upx@v3
         with:
           install-only: true
@@ -31,13 +37,19 @@ jobs:
       - name: UPX version
         run: upx --version
 
-      -
-        name: "Create release on GitHub"
+      - name: "Create and push tag"
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "Your Name"
+          git tag ${{ github.event.inputs.tag }}
+          git push origin ${{ github.event.inputs.tag }}
+
+      - name: "Create release on GitHub"
         uses: goreleaser/goreleaser-action@v4
         with:
           distribution: goreleaser
           version: latest
-          args: "release --clean --debug -f .github/conf/.goreleaser.yml"
-          workdir: .
+          args: "release --clean -f .github/conf/.goreleaser.yml"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
